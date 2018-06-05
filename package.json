@@ -5,7 +5,7 @@
   "main": "./Box2D/Box2D/Box2D.js",
   "types": "./Box2D/Box2D/Box2D.ts",
   "scripts": {
-    "build": "tsc -p Box2D/Testbed",
+    "build": "tsc -p Box2D/Box2D",
     "watch": "tsc -p Box2D/Testbed --watch",
     "start": "concurrently \"tsc -p Box2D/Testbed --watch\" \"http-server -c-1 -o\"",
     "test": "echo \"Error: no test specified\" && exit 1"
