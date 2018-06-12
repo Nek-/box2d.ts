@@ -1,0 +1,343 @@
+"use strict";
+/*
+* Copyright (c) 2006-2011 Erin Catto http://www.box2d.org
+*
+* This software is provided 'as-is', without any express or implied
+* warranty.  In no event will the authors be held liable for any damages
+* arising from the use of this software.
+* Permission is granted to anyone to use this software for any purpose,
+* including commercial applications, and to alter it and redistribute it
+* freely, subject to the following restrictions:
+* 1. The origin of this software must not be misrepresented; you must not
+* claim that you wrote the original software. If you use this software
+* in a product, an acknowledgment in the product documentation would be
+* appreciated but is not required.
+* 2. Altered source versions must be plainly marked as such, and must not be
+* misrepresented as being the original software.
+* 3. This notice may not be removed or altered from any source distribution.
+*/
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+var b2Settings_1 = require("../../Common/b2Settings");
+var b2Math_1 = require("../../Common/b2Math");
+var b2Joint_1 = require("./b2Joint");
+/// Weld joint definition. You need to specify local anchor points
+/// where they are attached and the relative body angle. The position
+/// of the anchor points is important for computing the reaction torque.
+var b2WeldJointDef = /** @class */ (function (_super) {
+    __extends(b2WeldJointDef, _super);
+    function b2WeldJointDef() {
+        var _this = _super.call(this, b2Joint_1.b2JointType.e_weldJoint) || this;
+        _this.localAnchorA = new b2Math_1.b2Vec2();
+        _this.localAnchorB = new b2Math_1.b2Vec2();
+        _this.referenceAngle = 0;
+        _this.frequencyHz = 0;
+        _this.dampingRatio = 0;
+        return _this;
+    }
+    b2WeldJointDef.prototype.Initialize = function (bA, bB, anchor) {
+        this.bodyA = bA;
+        this.bodyB = bB;
+        this.bodyA.GetLocalPoint(anchor, this.localAnchorA);
+        this.bodyB.GetLocalPoint(anchor, this.localAnchorB);
+        this.referenceAngle = this.bodyB.GetAngle() - this.bodyA.GetAngle();
+    };
+    return b2WeldJointDef;
+}(b2Joint_1.b2JointDef));
+exports.b2WeldJointDef = b2WeldJointDef;
+var b2WeldJoint = /** @class */ (function (_super) {
+    __extends(b2WeldJoint, _super);
+    function b2WeldJoint(def) {
+        var _this = _super.call(this, def) || this;
+        _this.m_frequencyHz = 0;
+        _this.m_dampingRatio = 0;
+        _this.m_bias = 0;
+        // Solver shared
+        _this.m_localAnchorA = new b2Math_1.b2Vec2();
+        _this.m_localAnchorB = new b2Math_1.b2Vec2();
+        _this.m_referenceAngle = 0;
+        _this.m_gamma = 0;
+        _this.m_impulse = new b2Math_1.b2Vec3(0, 0, 0);
+        // Solver temp
+        _this.m_indexA = 0;
+        _this.m_indexB = 0;
+        _this.m_rA = new b2Math_1.b2Vec2();
+        _this.m_rB = new b2Math_1.b2Vec2();
+        _this.m_localCenterA = new b2Math_1.b2Vec2();
+        _this.m_localCenterB = new b2Math_1.b2Vec2();
+        _this.m_invMassA = 0;
+        _this.m_invMassB = 0;
+        _this.m_invIA = 0;
+        _this.m_invIB = 0;
+        _this.m_mass = new b2Math_1.b2Mat33();
+        _this.m_qA = new b2Math_1.b2Rot();
+        _this.m_qB = new b2Math_1.b2Rot();
+        _this.m_lalcA = new b2Math_1.b2Vec2();
+        _this.m_lalcB = new b2Math_1.b2Vec2();
+        _this.m_K = new b2Math_1.b2Mat33();
+        _this.m_frequencyHz = b2Settings_1.b2Maybe(def.frequencyHz, 0);
+        _this.m_dampingRatio = b2Settings_1.b2Maybe(def.dampingRatio, 0);
+        _this.m_localAnchorA.Copy(b2Settings_1.b2Maybe(def.localAnchorA, b2Math_1.b2Vec2.ZERO));
+        _this.m_localAnchorB.Copy(b2Settings_1.b2Maybe(def.localAnchorB, b2Math_1.b2Vec2.ZERO));
+        _this.m_referenceAngle = b2Settings_1.b2Maybe(def.referenceAngle, 0);
+        _this.m_impulse.SetZero();
+        return _this;
+    }
+    b2WeldJoint.prototype.InitVelocityConstraints = function (data) {
+        this.m_indexA = this.m_bodyA.m_islandIndex;
+        this.m_indexB = this.m_bodyB.m_islandIndex;
+        this.m_localCenterA.Copy(this.m_bodyA.m_sweep.localCenter);
+        this.m_localCenterB.Copy(this.m_bodyB.m_sweep.localCenter);
+        this.m_invMassA = this.m_bodyA.m_invMass;
+        this.m_invMassB = this.m_bodyB.m_invMass;
+        this.m_invIA = this.m_bodyA.m_invI;
+        this.m_invIB = this.m_bodyB.m_invI;
+        var aA = data.positions[this.m_indexA].a;
+        var vA = data.velocities[this.m_indexA].v;
+        var wA = data.velocities[this.m_indexA].w;
+        var aB = data.positions[this.m_indexB].a;
+        var vB = data.velocities[this.m_indexB].v;
+        var wB = data.velocities[this.m_indexB].w;
+        var qA = this.m_qA.SetAngle(aA), qB = this.m_qB.SetAngle(aB);
+        // m_rA = b2Mul(qA, m_localAnchorA - m_localCenterA);
+        b2Math_1.b2Vec2.SubVV(this.m_localAnchorA, this.m_localCenterA, this.m_lalcA);
+        b2Math_1.b2Rot.MulRV(qA, this.m_lalcA, this.m_rA);
+        // m_rB = b2Mul(qB, m_localAnchorB - m_localCenterB);
+        b2Math_1.b2Vec2.SubVV(this.m_localAnchorB, this.m_localCenterB, this.m_lalcB);
+        b2Math_1.b2Rot.MulRV(qB, this.m_lalcB, this.m_rB);
+        // J = [-I -r1_skew I r2_skew]
+        //     [ 0       -1 0       1]
+        // r_skew = [-ry; rx]
+        // Matlab
+        // K = [ mA+r1y^2*iA+mB+r2y^2*iB,  -r1y*iA*r1x-r2y*iB*r2x,          -r1y*iA-r2y*iB]
+        //     [  -r1y*iA*r1x-r2y*iB*r2x, mA+r1x^2*iA+mB+r2x^2*iB,           r1x*iA+r2x*iB]
+        //     [          -r1y*iA-r2y*iB,           r1x*iA+r2x*iB,                   iA+iB]
+        var mA = this.m_invMassA, mB = this.m_invMassB;
+        var iA = this.m_invIA, iB = this.m_invIB;
+        var K = this.m_K;
+        K.ex.x = mA + mB + this.m_rA.y * this.m_rA.y * iA + this.m_rB.y * this.m_rB.y * iB;
+        K.ey.x = -this.m_rA.y * this.m_rA.x * iA - this.m_rB.y * this.m_rB.x * iB;
+        K.ez.x = -this.m_rA.y * iA - this.m_rB.y * iB;
+        K.ex.y = K.ey.x;
+        K.ey.y = mA + mB + this.m_rA.x * this.m_rA.x * iA + this.m_rB.x * this.m_rB.x * iB;
+        K.ez.y = this.m_rA.x * iA + this.m_rB.x * iB;
+        K.ex.z = K.ez.x;
+        K.ey.z = K.ez.y;
+        K.ez.z = iA + iB;
+        if (this.m_frequencyHz > 0) {
+            K.GetInverse22(this.m_mass);
+            var invM = iA + iB;
+            var m = invM > 0 ? 1 / invM : 0;
+            var C = aB - aA - this.m_referenceAngle;
+            // Frequency
+            var omega = 2 * b2Settings_1.b2_pi * this.m_frequencyHz;
+            // Damping coefficient
+            var d = 2 * m * this.m_dampingRatio * omega;
+            // Spring stiffness
+            var k = m * omega * omega;
+            // magic formulas
+            var h = data.step.dt;
+            this.m_gamma = h * (d + h * k);
+            this.m_gamma = this.m_gamma !== 0 ? 1 / this.m_gamma : 0;
+            this.m_bias = C * h * k * this.m_gamma;
+            invM += this.m_gamma;
+            this.m_mass.ez.z = invM !== 0 ? 1 / invM : 0;
+        }
+        else {
+            K.GetSymInverse33(this.m_mass);
+            this.m_gamma = 0;
+            this.m_bias = 0;
+        }
+        if (data.step.warmStarting) {
+            // Scale impulses to support a variable time step.
+            this.m_impulse.SelfMul(data.step.dtRatio);
+            // b2Vec2 P(m_impulse.x, m_impulse.y);
+            var P = b2WeldJoint.InitVelocityConstraints_s_P.Set(this.m_impulse.x, this.m_impulse.y);
+            // vA -= mA * P;
+            vA.SelfMulSub(mA, P);
+            wA -= iA * (b2Math_1.b2Vec2.CrossVV(this.m_rA, P) + this.m_impulse.z);
+            // vB += mB * P;
+            vB.SelfMulAdd(mB, P);
+            wB += iB * (b2Math_1.b2Vec2.CrossVV(this.m_rB, P) + this.m_impulse.z);
+        }
+        else {
+            this.m_impulse.SetZero();
+        }
+        // data.velocities[this.m_indexA].v = vA;
+        data.velocities[this.m_indexA].w = wA;
+        // data.velocities[this.m_indexB].v = vB;
+        data.velocities[this.m_indexB].w = wB;
+    };
+    b2WeldJoint.prototype.SolveVelocityConstraints = function (data) {
+        var vA = data.velocities[this.m_indexA].v;
+        var wA = data.velocities[this.m_indexA].w;
+        var vB = data.velocities[this.m_indexB].v;
+        var wB = data.velocities[this.m_indexB].w;
+        var mA = this.m_invMassA, mB = this.m_invMassB;
+        var iA = this.m_invIA, iB = this.m_invIB;
+        if (this.m_frequencyHz > 0) {
+            var Cdot2 = wB - wA;
+            var impulse2 = -this.m_mass.ez.z * (Cdot2 + this.m_bias + this.m_gamma * this.m_impulse.z);
+            this.m_impulse.z += impulse2;
+            wA -= iA * impulse2;
+            wB += iB * impulse2;
+            // b2Vec2 Cdot1 = vB + b2Vec2.CrossSV(wB, this.m_rB) - vA - b2Vec2.CrossSV(wA, this.m_rA);
+            var Cdot1 = b2Math_1.b2Vec2.SubVV(b2Math_1.b2Vec2.AddVCrossSV(vB, wB, this.m_rB, b2Math_1.b2Vec2.s_t0), b2Math_1.b2Vec2.AddVCrossSV(vA, wA, this.m_rA, b2Math_1.b2Vec2.s_t1), b2WeldJoint.SolveVelocityConstraints_s_Cdot1);
+            // b2Vec2 impulse1 = -b2Mul22(m_mass, Cdot1);
+            var impulse1 = b2Math_1.b2Mat33.MulM33XY(this.m_mass, Cdot1.x, Cdot1.y, b2WeldJoint.SolveVelocityConstraints_s_impulse1).SelfNeg();
+            this.m_impulse.x += impulse1.x;
+            this.m_impulse.y += impulse1.y;
+            // b2Vec2 P = impulse1;
+            var P = impulse1;
+            // vA -= mA * P;
+            vA.SelfMulSub(mA, P);
+            // wA -= iA * b2Cross(m_rA, P);
+            wA -= iA * b2Math_1.b2Vec2.CrossVV(this.m_rA, P);
+            // vB += mB * P;
+            vB.SelfMulAdd(mB, P);
+            // wB += iB * b2Cross(m_rB, P);
+            wB += iB * b2Math_1.b2Vec2.CrossVV(this.m_rB, P);
+        }
+        else {
+            // b2Vec2 Cdot1 = vB + b2Cross(wB, this.m_rB) - vA - b2Cross(wA, this.m_rA);
+            var Cdot1 = b2Math_1.b2Vec2.SubVV(b2Math_1.b2Vec2.AddVCrossSV(vB, wB, this.m_rB, b2Math_1.b2Vec2.s_t0), b2Math_1.b2Vec2.AddVCrossSV(vA, wA, this.m_rA, b2Math_1.b2Vec2.s_t1), b2WeldJoint.SolveVelocityConstraints_s_Cdot1);
+            var Cdot2 = wB - wA;
+            // b2Vec3 const Cdot(Cdot1.x, Cdot1.y, Cdot2);
+            // b2Vec3 impulse = -b2Mul(m_mass, Cdot);
+            var impulse = b2Math_1.b2Mat33.MulM33XYZ(this.m_mass, Cdot1.x, Cdot1.y, Cdot2, b2WeldJoint.SolveVelocityConstraints_s_impulse).SelfNeg();
+            this.m_impulse.SelfAdd(impulse);
+            // b2Vec2 P(impulse.x, impulse.y);
+            var P = b2WeldJoint.SolveVelocityConstraints_s_P.Set(impulse.x, impulse.y);
+            // vA -= mA * P;
+            vA.SelfMulSub(mA, P);
+            wA -= iA * (b2Math_1.b2Vec2.CrossVV(this.m_rA, P) + impulse.z);
+            // vB += mB * P;
+            vB.SelfMulAdd(mB, P);
+            wB += iB * (b2Math_1.b2Vec2.CrossVV(this.m_rB, P) + impulse.z);
+        }
+        // data.velocities[this.m_indexA].v = vA;
+        data.velocities[this.m_indexA].w = wA;
+        // data.velocities[this.m_indexB].v = vB;
+        data.velocities[this.m_indexB].w = wB;
+    };
+    b2WeldJoint.prototype.SolvePositionConstraints = function (data) {
+        var cA = data.positions[this.m_indexA].c;
+        var aA = data.positions[this.m_indexA].a;
+        var cB = data.positions[this.m_indexB].c;
+        var aB = data.positions[this.m_indexB].a;
+        var qA = this.m_qA.SetAngle(aA), qB = this.m_qB.SetAngle(aB);
+        var mA = this.m_invMassA, mB = this.m_invMassB;
+        var iA = this.m_invIA, iB = this.m_invIB;
+        // b2Vec2 rA = b2Mul(qA, m_localAnchorA - m_localCenterA);
+        b2Math_1.b2Vec2.SubVV(this.m_localAnchorA, this.m_localCenterA, this.m_lalcA);
+        var rA = b2Math_1.b2Rot.MulRV(qA, this.m_lalcA, this.m_rA);
+        // b2Vec2 rB = b2Mul(qB, m_localAnchorB - m_localCenterB);
+        b2Math_1.b2Vec2.SubVV(this.m_localAnchorB, this.m_localCenterB, this.m_lalcB);
+        var rB = b2Math_1.b2Rot.MulRV(qB, this.m_lalcB, this.m_rB);
+        var positionError, angularError;
+        var K = this.m_K;
+        K.ex.x = mA + mB + rA.y * rA.y * iA + rB.y * rB.y * iB;
+        K.ey.x = -rA.y * rA.x * iA - rB.y * rB.x * iB;
+        K.ez.x = -rA.y * iA - rB.y * iB;
+        K.ex.y = K.ey.x;
+        K.ey.y = mA + mB + rA.x * rA.x * iA + rB.x * rB.x * iB;
+        K.ez.y = rA.x * iA + rB.x * iB;
+        K.ex.z = K.ez.x;
+        K.ey.z = K.ez.y;
+        K.ez.z = iA + iB;
+        if (this.m_frequencyHz > 0) {
+            // b2Vec2 C1 =  cB + rB - cA - rA;
+            var C1 = b2Math_1.b2Vec2.SubVV(b2Math_1.b2Vec2.AddVV(cB, rB, b2Math_1.b2Vec2.s_t0), b2Math_1.b2Vec2.AddVV(cA, rA, b2Math_1.b2Vec2.s_t1), b2WeldJoint.SolvePositionConstraints_s_C1);
+            positionError = C1.Length();
+            angularError = 0;
+            // b2Vec2 P = -K.Solve22(C1);
+            var P = K.Solve22(C1.x, C1.y, b2WeldJoint.SolvePositionConstraints_s_P).SelfNeg();
+            // cA -= mA * P;
+            cA.SelfMulSub(mA, P);
+            aA -= iA * b2Math_1.b2Vec2.CrossVV(rA, P);
+            // cB += mB * P;
+            cB.SelfMulAdd(mB, P);
+            aB += iB * b2Math_1.b2Vec2.CrossVV(rB, P);
+        }
+        else {
+            // b2Vec2 C1 =  cB + rB - cA - rA;
+            var C1 = b2Math_1.b2Vec2.SubVV(b2Math_1.b2Vec2.AddVV(cB, rB, b2Math_1.b2Vec2.s_t0), b2Math_1.b2Vec2.AddVV(cA, rA, b2Math_1.b2Vec2.s_t1), b2WeldJoint.SolvePositionConstraints_s_C1);
+            var C2 = aB - aA - this.m_referenceAngle;
+            positionError = C1.Length();
+            angularError = b2Math_1.b2Abs(C2);
+            // b2Vec3 C(C1.x, C1.y, C2);
+            // b2Vec3 impulse = -K.Solve33(C);
+            var impulse = K.Solve33(C1.x, C1.y, C2, b2WeldJoint.SolvePositionConstraints_s_impulse).SelfNeg();
+            // b2Vec2 P(impulse.x, impulse.y);
+            var P = b2WeldJoint.SolvePositionConstraints_s_P.Set(impulse.x, impulse.y);
+            // cA -= mA * P;
+            cA.SelfMulSub(mA, P);
+            aA -= iA * (b2Math_1.b2Vec2.CrossVV(this.m_rA, P) + impulse.z);
+            // cB += mB * P;
+            cB.SelfMulAdd(mB, P);
+            aB += iB * (b2Math_1.b2Vec2.CrossVV(this.m_rB, P) + impulse.z);
+        }
+        // data.positions[this.m_indexA].c = cA;
+        data.positions[this.m_indexA].a = aA;
+        // data.positions[this.m_indexB].c = cB;
+        data.positions[this.m_indexB].a = aB;
+        return positionError <= b2Settings_1.b2_linearSlop && angularError <= b2Settings_1.b2_angularSlop;
+    };
+    b2WeldJoint.prototype.GetAnchorA = function (out) {
+        return this.m_bodyA.GetWorldPoint(this.m_localAnchorA, out);
+    };
+    b2WeldJoint.prototype.GetAnchorB = function (out) {
+        return this.m_bodyB.GetWorldPoint(this.m_localAnchorB, out);
+    };
+    b2WeldJoint.prototype.GetReactionForce = function (inv_dt, out) {
+        // b2Vec2 P(this.m_impulse.x, this.m_impulse.y);
+        // return inv_dt * P;
+        out.x = inv_dt * this.m_impulse.x;
+        out.y = inv_dt * this.m_impulse.y;
+        return out;
+    };
+    b2WeldJoint.prototype.GetReactionTorque = function (inv_dt) {
+        return inv_dt * this.m_impulse.z;
+    };
+    b2WeldJoint.prototype.GetLocalAnchorA = function () { return this.m_localAnchorA; };
+    b2WeldJoint.prototype.GetLocalAnchorB = function () { return this.m_localAnchorB; };
+    b2WeldJoint.prototype.GetReferenceAngle = function () { return this.m_referenceAngle; };
+    b2WeldJoint.prototype.SetFrequency = function (hz) { this.m_frequencyHz = hz; };
+    b2WeldJoint.prototype.GetFrequency = function () { return this.m_frequencyHz; };
+    b2WeldJoint.prototype.SetDampingRatio = function (ratio) { this.m_dampingRatio = ratio; };
+    b2WeldJoint.prototype.GetDampingRatio = function () { return this.m_dampingRatio; };
+    b2WeldJoint.prototype.Dump = function (log) {
+        var indexA = this.m_bodyA.m_islandIndex;
+        var indexB = this.m_bodyB.m_islandIndex;
+        log("  const jd: b2WeldJointDef = new b2WeldJointDef();\n");
+        log("  jd.bodyA = bodies[%d];\n", indexA);
+        log("  jd.bodyB = bodies[%d];\n", indexB);
+        log("  jd.collideConnected = %s;\n", (this.m_collideConnected) ? ("true") : ("false"));
+        log("  jd.localAnchorA.Set(%.15f, %.15f);\n", this.m_localAnchorA.x, this.m_localAnchorA.y);
+        log("  jd.localAnchorB.Set(%.15f, %.15f);\n", this.m_localAnchorB.x, this.m_localAnchorB.y);
+        log("  jd.referenceAngle = %.15f;\n", this.m_referenceAngle);
+        log("  jd.frequencyHz = %.15f;\n", this.m_frequencyHz);
+        log("  jd.dampingRatio = %.15f;\n", this.m_dampingRatio);
+        log("  joints[%d] = this.m_world.CreateJoint(jd);\n", this.m_index);
+    };
+    b2WeldJoint.InitVelocityConstraints_s_P = new b2Math_1.b2Vec2();
+    b2WeldJoint.SolveVelocityConstraints_s_Cdot1 = new b2Math_1.b2Vec2();
+    b2WeldJoint.SolveVelocityConstraints_s_impulse1 = new b2Math_1.b2Vec2();
+    b2WeldJoint.SolveVelocityConstraints_s_impulse = new b2Math_1.b2Vec3();
+    b2WeldJoint.SolveVelocityConstraints_s_P = new b2Math_1.b2Vec2();
+    b2WeldJoint.SolvePositionConstraints_s_C1 = new b2Math_1.b2Vec2();
+    b2WeldJoint.SolvePositionConstraints_s_P = new b2Math_1.b2Vec2();
+    b2WeldJoint.SolvePositionConstraints_s_impulse = new b2Math_1.b2Vec3();
+    return b2WeldJoint;
+}(b2Joint_1.b2Joint));
+exports.b2WeldJoint = b2WeldJoint;
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiYjJXZWxkSm9pbnQuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi8uLi8uLi8uLi9Cb3gyRC9Cb3gyRC9EeW5hbWljcy9Kb2ludHMvYjJXZWxkSm9pbnQudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IjtBQUFBOzs7Ozs7Ozs7Ozs7Ozs7O0VBZ0JFOzs7Ozs7Ozs7Ozs7QUFFRixzREFBd0Y7QUFDeEYsOENBQWdGO0FBRWhGLHFDQUEwRTtBQWUxRSxrRUFBa0U7QUFDbEUscUVBQXFFO0FBQ3JFLHdFQUF3RTtBQUN4RTtJQUFvQyxrQ0FBVTtJQVc1QztRQUFBLFlBQ0Usa0JBQU0scUJBQVcsQ0FBQyxXQUFXLENBQUMsU0FDL0I7UUFaZSxrQkFBWSxHQUFXLElBQUksZUFBTSxFQUFFLENBQUM7UUFFcEMsa0JBQVksR0FBVyxJQUFJLGVBQU0sRUFBRSxDQUFDO1FBRTdDLG9CQUFjLEdBQVcsQ0FBQyxDQUFDO1FBRTNCLGlCQUFXLEdBQVcsQ0FBQyxDQUFDO1FBRXhCLGtCQUFZLEdBQVcsQ0FBQyxDQUFDOztJQUloQyxDQUFDO0lBRU0sbUNBQVUsR0FBakIsVUFBa0IsRUFBVSxFQUFFLEVBQVUsRUFBRSxNQUFjO1FBQ3RELElBQUksQ0FBQyxLQUFLLEdBQUcsRUFBRSxDQUFDO1FBQ2hCLElBQUksQ0FBQyxLQUFLLEdBQUcsRUFBRSxDQUFDO1FBQ2hCLElBQUksQ0FBQyxLQUFLLENBQUMsYUFBYSxDQUFDLE1BQU0sRUFBRSxJQUFJLENBQUMsWUFBWSxDQUFDLENBQUM7UUFDcEQsSUFBSSxDQUFDLEtBQUssQ0FBQyxhQUFhLENBQUMsTUFBTSxFQUFFLElBQUksQ0FBQyxZQUFZLENBQUMsQ0FBQztRQUNwRCxJQUFJLENBQUMsY0FBYyxHQUFHLElBQUksQ0FBQyxLQUFLLENBQUMsUUFBUSxFQUFFLEdBQUcsSUFBSSxDQUFDLEtBQUssQ0FBQyxRQUFRLEVBQUUsQ0FBQztJQUN0RSxDQUFDO0lBQ0gscUJBQUM7QUFBRCxDQUFDLEFBdEJELENBQW9DLG9CQUFV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

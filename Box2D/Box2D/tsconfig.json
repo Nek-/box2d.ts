@@ -1,14 +1,15 @@
 {
   "compilerOptions": {
     "target": "es5",
-    "module": "amd",
+    "module": "commonjs",
     "strict": true,
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
     "noUnusedLocals": true,
     "inlineSourceMap": true,
-    "outFile": "../../dist/box2d.dev.js"
+    "declaration": true,
+    "outDir": "../../dist/Box2D"
   },
   "include": [
     "**/*.ts"
