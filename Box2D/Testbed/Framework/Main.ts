@@ -1,4 +1,4 @@
-import * as box2d from "Box2D";
+import * as box2d from "@flyover/box2d";
 import { Settings, Test } from "./Test";
 import { g_debugDraw, g_camera } from "./DebugDraw";
 import { g_testEntries } from "../Tests/TestEntries";

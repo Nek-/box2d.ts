@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "A TypeScript port of Box2D",
   "main": "./dist/Box2D/Box2D.js",
-  "types": "./dist/Box2D/Box2D.d.ts",
+  "typings": "./dist/Box2D/Box2D.d.ts",
   "scripts": {
     "build": "tsc -p Box2D/Testbed",
     "build-box2d": "tsc -p Box2D/Box2D",
