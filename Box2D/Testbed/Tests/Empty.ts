@@ -1,5 +1,5 @@
 import * as box2d from "@flyover/box2d";
-import * as testbed from "Testbed";
+import * as testbed from "../Testbed";
 
 export class Empty extends testbed.Test {
   constructor() {

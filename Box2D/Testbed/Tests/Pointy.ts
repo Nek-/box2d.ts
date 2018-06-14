@@ -19,7 +19,7 @@
 // #if B2_ENABLE_PARTICLE
 
 import * as box2d from "@flyover/box2d";
-import * as testbed from "Testbed";
+import * as testbed from "../Testbed";
 
 /**
  * Test behavior when particles fall on a convex ambigious Body

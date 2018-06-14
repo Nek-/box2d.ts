@@ -17,7 +17,7 @@
 */
 
 import * as box2d from "@flyover/box2d";
-import * as testbed from "Testbed";
+import * as testbed from "../Testbed";
 
 /**
  * This callback is called by box2d.b2World::QueryAABB. We find

@@ -17,7 +17,7 @@
 */
 
 import * as box2d from "@flyover/box2d";
-import * as testbed from "Testbed";
+import * as testbed from "../Testbed";
 
 // This is a fun demo that shows off the wheel joint
 export class Car extends testbed.Test {

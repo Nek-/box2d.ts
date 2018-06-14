@@ -17,7 +17,7 @@
 */
 
 import * as box2d from "@flyover/box2d";
-import * as testbed from "Testbed";
+import * as testbed from "../Testbed";
 
 // Note: even with a restitution of 1.0, there is some energy change
 // due to position correction.

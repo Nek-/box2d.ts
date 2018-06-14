@@ -17,7 +17,7 @@
 */
 
 import * as box2d from "@flyover/box2d";
-import * as testbed from "Testbed";
+import * as testbed from "../Testbed";
 
 export class EdgeShapesCallback extends box2d.b2RayCastCallback {
   public m_fixture: box2d.b2Fixture | null = null;

@@ -1,32 +1,33 @@
-import * as path from 'path';
-import * as webpack from 'webpack';
-const CleanWebpackPlugin = require('clean-webpack-plugin');
+import * as path from "path";
+import * as webpack from "webpack";
+import * as CleanWebpackPlugin from "clean-webpack-plugin";
 
-
-const distDir = path.resolve(__dirname, '../dist');
+const distDir = path.resolve(__dirname, "../../dist/Testbed");
 
 const config: webpack.Configuration = {
-  mode: 'production',
-  entry: './Testbed.ts',
+  mode: "production",
+  entry: "./Testbed.ts",
   resolve: {
-      extensions: ['.ts']
+      extensions: [".ts"],
   },
   output: {
       path: distDir,
-      filename: '[name]_bundle.js'
+      filename: "[name]_bundle.js",
   },
   module: {
       rules: [
           {
               test: /\.ts$/,
-              loaders: ['ts-loader']
-          }
-      ]
+              loaders: ["ts-loader"],
+          },
+      ],
   },
 
   plugins: [
-      new CleanWebpackPlugin([distDir]),
-  ]
+      new CleanWebpackPlugin([distDir], {
+          root: path.resolve(__dirname, "../.."),
+      }),
+  ],
 };
 
 export default config;

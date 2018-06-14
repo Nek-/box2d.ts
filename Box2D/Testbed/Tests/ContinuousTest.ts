@@ -17,7 +17,7 @@
 */
 
 import * as box2d from "@flyover/box2d";
-import * as testbed from "Testbed";
+import * as testbed from "../Testbed";
 
 export class ContinuousTest extends testbed.Test {
   public m_body: box2d.b2Body;

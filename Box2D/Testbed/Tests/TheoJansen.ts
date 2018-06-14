@@ -17,7 +17,7 @@
 */
 
 import * as box2d from "@flyover/box2d";
-import * as testbed from "Testbed";
+import * as testbed from "../Testbed";
 
 // Inspired by a contribution by roman_m
 // Dimensions scooped from APE (http://www.cove.org/ape/index.htm)

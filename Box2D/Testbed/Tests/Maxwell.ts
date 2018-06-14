@@ -19,7 +19,7 @@
 // #if B2_ENABLE_PARTICLE
 
 import * as box2d from "@flyover/box2d";
-import * as testbed from "Testbed";
+import * as testbed from "../Testbed";
 
 /**
  * Game which adds some fun to Maxwell's demon.

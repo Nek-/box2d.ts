@@ -17,7 +17,7 @@
 */
 
 import * as box2d from "@flyover/box2d";
-import * as testbed from "Testbed";
+import * as testbed from "../Testbed";
 
 export class MotorJoint extends testbed.Test {
   public m_joint: box2d.b2MotorJoint;

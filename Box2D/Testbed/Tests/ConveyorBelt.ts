@@ -17,7 +17,7 @@
 */
 
 import * as box2d from "@flyover/box2d";
-import * as testbed from "Testbed";
+import * as testbed from "../Testbed";
 
 export class ConveyorBelt extends testbed.Test {
   public m_platform: box2d.b2Fixture;

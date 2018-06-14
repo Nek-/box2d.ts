@@ -19,7 +19,7 @@
  */
 
 import * as box2d from "@flyover/box2d";
-import * as testbed from "Testbed";
+import * as testbed from "../Testbed";
 
 const DEGTORAD = 0.0174532925199432957;
 // const RADTODEG = 57.295779513082320876;

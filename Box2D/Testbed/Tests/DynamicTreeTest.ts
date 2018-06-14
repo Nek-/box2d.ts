@@ -17,7 +17,7 @@
 */
 
 import * as box2d from "@flyover/box2d";
-import * as testbed from "Testbed";
+import * as testbed from "../Testbed";
 
 export class DynamicTreeTest extends testbed.Test {
   public static readonly e_actorCount = 128;
