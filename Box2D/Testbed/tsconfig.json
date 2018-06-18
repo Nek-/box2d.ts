@@ -1,15 +1,13 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "es6",
     "module": "commonjs",
-    "strict": true,
     "noImplicitAny": true,
+    "sourceMap": false,
+    "strict": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
     "noUnusedLocals": true,
     "inlineSourceMap": true,
-  },
-  "include": [
-    "**/*.ts"
-  ]
+  }
 }

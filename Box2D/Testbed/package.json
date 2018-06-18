@@ -11,6 +11,7 @@
     "build": "TS_NODE_PROJECT=\"tsconfig-for-webpack-config.json\" webpack"
   },
   "devDependencies": {
+    "@types/clean-webpack-plugin": "^0.1.2",
     "@types/node": "^10.3.3",
     "@types/webpack": "^4.4.0",
     "clean-webpack-plugin": "^0.1.19",
@@ -22,6 +23,6 @@
     "webpack-cli": "^3.0.6"
   },
   "dependencies": {
-    "@flyover/box2d": "https://github.com/Nek-/box2d.ts#feature/many-output"
+    "@flyover/box2d": "https://github.com/Nek-/box2d.ts#feature/new-build-system"
   }
 }
